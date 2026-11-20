@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#45456e">
+<title>Kryželio raštų kūrėjas</title>
+<link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+<aside class="side">
+  <div class="top">
+    <div>
+      <h1 data-i18n="heading"></h1>
+      <div class="tagline" data-i18n="tagline"></div>
+    </div>
+    <label class="lang"><span class="sr" data-i18n="language"></span><select id="lang"></select></label>
+  </div>
+
+  <div id="notice" class="notice" role="status" hidden></div>
+
+  <h2 data-i18n="tool"></h2>
+  <div class="row" id="tools" role="group">
+    <button class="btn" data-tool="pen" data-i18n="pen"></button>
+    <button class="btn" data-tool="erase" data-i18n="erase"></button>
+    <button class="btn" data-tool="fill" data-i18n="fill"></button>
+  </div>
+
+  <h2 data-i18n="mirror"></h2>
+  <div class="row" id="mirror" role="group">
+    <button class="btn" data-m="none" data-i18n="mirrorNone"></button>
+    <button class="btn" data-m="h" data-i18n="mirrorH"></button>
+    <button class="btn" data-m="v" data-i18n="mirrorV"></button>
+    <button class="btn" data-m="both" data-i18n="mirrorBoth"></button>
+  </div>
+
+  <h2><span data-i18n="colors"></span> <span id="pc" class="muted"></span></h2>
+  <ul class="pal" id="pal"></ul>
+  <div class="row"><button class="btn" id="add" data-i18n="addColor"></button></div>
+
+  <h2 data-i18n="edit"></h2>
+  <div class="row">
+    <button class="btn" id="undo" data-i18n="undo"></button>
+    <button class="btn" id="redo" data-i18n="redo"></button>
+    <button class="btn" id="clear" data-i18n="clear"></button>
+  </div>
+
+  <h2 data-i18n="size"></h2>
+  <form class="fitin" id="sizeform">
+    <label><span data-i18n="width"></span><input type="number" id="gw" min="5" max="200" required><span data-i18n="cells"></span></label>
+    <label><span data-i18n="height"></span><input type="number" id="gh" min="5" max="200" required><span data-i18n="cells"></span></label>
+    <div class="row"><button class="btn" type="submit" data-i18n="applySize"></button></div>
+  </form>
+
+  <h2 data-i18n="fit"></h2>
+  <div class="sub2" id="dsize"></div>
+  <div class="fitin">
+    <label><span data-i18n="fabricW"></span><input type="number" id="fw" min="1" value="50"><span data-i18n="cells"></span></label>
+    <label><span data-i18n="fabricH"></span><input type="number" id="fh" min="1" value="50"><span data-i18n="cells"></span></label>
+    <label><span data-i18n="minGap"></span><input type="number" id="fg" min="0" value="1"><span data-i18n="cells"></span></label>
+  </div>
+  <div id="fitout"></div>
+
+  <h2 data-i18n="print"></h2>
+  <select id="pmode" class="btn wide">
+    <option value="both" data-i18n="modeBoth"></option>
+    <option value="sym" data-i18n="modeSym"></option>
+    <option value="col" data-i18n="modeCol"></option>
+  </select>
+  <div class="row">
+    <button class="btn primary" id="pdfopen" data-i18n="openPdf"></button>
+    <button class="btn" id="pdfdl" data-i18n="downloadPdf"></button>
+  </div>
+
+  <h2 data-i18n="file"></h2>
+  <div class="row">
+    <button class="btn" id="new" data-i18n="newPattern"></button>
+    <button class="btn" id="save" data-i18n="save"></button>
+    <button class="btn" id="open" data-i18n="open"></button>
+    <input type="file" id="file" accept=".json,application/json" hidden>
+  </div>
+
+  <p class="hint" data-i18n-html="hint"></p>
+</aside>
+
+<main class="desk">
+  <div class="bar">
+    <input id="title" data-i18n-attr="aria-label:patternTitle" maxlength="120">
+    <span class="muted" id="dims"></span>
+    <span class="zoom" role="group" data-i18n-attr="aria-label:zoom">
+      <button class="btn sm" id="zout" data-i18n-attr="aria-label:zoomOut">−</button>
+      <button class="btn sm" id="zfit" data-i18n="zoomFit"></button>
+      <button class="btn sm" id="zin" data-i18n-attr="aria-label:zoomIn">+</button>
+    </span>
+  </div>
+  <div class="canvaswrap" id="wrap">
+    <canvas id="grid" tabindex="0" role="application" data-i18n-attr="aria-label:canvasLabel"></canvas>
+  </div>
+  <div id="live" class="sr" aria-live="polite"></div>
+  <section class="legend">
+    <h3 data-i18n="legend"></h3>
+    <ul id="legend"></ul>
+  </section>
+</main>
+
+<script type="module" src="./src/main.ts"></script>
+</body>
+</html>

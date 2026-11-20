@@ -1,0 +1,209 @@
+/** UI texts. Add a language by adding a dictionary with the same keys. */
+const lt = {
+  appTitle: 'Kryželio raštų kūrėjas',
+  heading: 'Raštų kūrėjas',
+  tagline: 'Kryželio raštai A4 lapui, su legenda',
+  language: 'Kalba',
+  tool: 'Įrankis',
+  pen: 'Piešti',
+  erase: 'Trintukas',
+  fill: 'Užpildyti plotą',
+  mirror: 'Veidrodinis piešimas',
+  mirrorNone: 'Išjungta',
+  mirrorH: 'Kairė ↔ dešinė',
+  mirrorV: 'Viršus ↕ apačia',
+  mirrorBoth: 'Į 4 puses',
+  colors: 'Spalvos ir simboliai',
+  addColor: '+ Pridėti spalvą',
+  selectColor: 'Pasirinkti spalvą {n}',
+  colorPicker: 'Spalva',
+  symbol: 'Simbolis',
+  descPlaceholder: 'Aprašymas, siūlo nr.',
+  removeColor: 'Pašalinti spalvą',
+  stitches: 'Dygsnių: {n}',
+  edit: 'Redagavimas',
+  undo: '↶ Atšaukti',
+  redo: '↷ Grąžinti',
+  clear: 'Išvalyti tinklelį',
+  size: 'Tinklelio dydis',
+  width: 'Plotis',
+  height: 'Aukštis',
+  cells: 'langelių',
+  applySize: 'Pakeisti dydį',
+  resizeLoses: 'Sumažinus tinklelį dings {n} dygsnių. Tęsti?',
+  zoom: 'Mastelis',
+  zoomFit: 'Talpinti',
+  zoomIn: 'Padidinti',
+  zoomOut: 'Sumažinti',
+  patternTitle: 'Rašto pavadinimas',
+  fit: 'Talpinimas audinyje',
+  fabricW: 'Audinio plotis',
+  fabricH: 'Audinio aukštis',
+  minGap: 'Mažiausias tarpas',
+  drawFirst: 'Pirmiausia ką nors nupieškite.',
+  designSize: 'Jūsų raštas – <b>{w} × {h}</b> langelių (plotis × aukštis).',
+  copies: 'Kartai',
+  gapBetween: 'Tarpas tarp',
+  left: 'Kairėje',
+  right: 'Dešinėje',
+  top: 'Viršuje',
+  bottom: 'Apačioje',
+  intoWidth: 'Į plotį ({n})',
+  intoHeight: 'Į aukštį ({n})',
+  noFit: 'Raštas netelpa',
+  fitMax: 'Daugiausia telpa: <b>{x} į plotį × {y} į aukštį, iš viso {t} vnt.</b>',
+  print: 'Spausdinimas',
+  modeBoth: 'Spalvos + simboliai',
+  modeSym: 'Tik simboliai (nespalvotai)',
+  modeCol: 'Tik spalvos',
+  downloadPdf: '⬇ Atsisiųsti PDF',
+  openPdf: '🖨 Atidaryti PDF spausdinimui',
+  pdfWorking: 'Ruošiamas PDF…',
+  pdfFailed: 'Nepavyko sukurti PDF.',
+  popupBlocked: 'Naršyklė užblokavo naują langą – PDF atsisiųstas vietoj to.',
+  file: 'Failas',
+  newPattern: 'Naujas raštas',
+  save: 'Išsaugoti į failą',
+  open: 'Atidaryti failą…',
+  notAPattern: 'Tai ne rašto failas: {why}',
+  defaultTitle: 'Kryželio raštas',
+  sampleTitle: 'Snaigė (pavyzdys)',
+  sampleDesc: 'Raudona (pvz., DMC 321)',
+  firstDesc: 'Raudona',
+  legend: 'Legenda',
+  descr: 'Aprašymas',
+  count: 'Dygsniai',
+  page: 'Puslapis {i} / {n}',
+  colsRows: 'stulpeliai {c0}–{c1}, eilutės {r0}–{r1}',
+  overview: 'Puslapių išdėstymas',
+  canvasLabel: 'Rašto tinklelis. Rodyklėmis judėkite, tarpas – piešti, Delete – trinti, F – užpildyti, 1–9 – spalva.',
+  cellEmpty: 'tuščia',
+  cellAt: 'Eilutė {r}, stulpelis {c}: {v}',
+  framed: '<b>Peržiūros režimas:</b> čia failų atsisiuntimas gali neveikti. Atsisiųskite šį failą ir atidarykite jį naršyklėje.',
+  hint: 'Spustelėkite arba vilkite pele per tinklelį. Dešinysis pelės mygtukas trina. Klaviatūra: rodyklės, tarpas, Delete, F, skaičiai 1–9. Ctrl+ratukas keičia mastelį. Darbas automatiškai išsaugomas šioje naršyklėje – kopijai ar perkėlimui naudokite <b>Išsaugoti į failą</b>.',
+};
+
+export type Key = keyof typeof lt;
+type Dict = Record<Key, string>;
+
+const en: Dict = {
+  appTitle: 'Cross-stitch pattern maker',
+  heading: 'Pattern maker',
+  tagline: 'Cross-stitch charts for A4, with a legend',
+  language: 'Language',
+  tool: 'Tool',
+  pen: 'Draw',
+  erase: 'Eraser',
+  fill: 'Fill area',
+  mirror: 'Mirror drawing',
+  mirrorNone: 'Off',
+  mirrorH: 'Left ↔ right',
+  mirrorV: 'Top ↕ bottom',
+  mirrorBoth: 'All 4 ways',
+  colors: 'Colours and symbols',
+  addColor: '+ Add colour',
+  selectColor: 'Select colour {n}',
+  colorPicker: 'Colour',
+  symbol: 'Symbol',
+  descPlaceholder: 'Description, thread no.',
+  removeColor: 'Remove colour',
+  stitches: 'Stitches: {n}',
+  edit: 'Editing',
+  undo: '↶ Undo',
+  redo: '↷ Redo',
+  clear: 'Clear grid',
+  size: 'Grid size',
+  width: 'Width',
+  height: 'Height',
+  cells: 'cells',
+  applySize: 'Resize',
+  resizeLoses: 'Shrinking the grid removes {n} stitches. Continue?',
+  zoom: 'Zoom',
+  zoomFit: 'Fit',
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  patternTitle: 'Pattern title',
+  fit: 'Fitting on fabric',
+  fabricW: 'Fabric width',
+  fabricH: 'Fabric height',
+  minGap: 'Minimum gap',
+  drawFirst: 'Draw something first.',
+  designSize: 'Your design is <b>{w} × {h}</b> cells (width × height).',
+  copies: 'Copies',
+  gapBetween: 'Gap',
+  left: 'Left',
+  right: 'Right',
+  top: 'Top',
+  bottom: 'Bottom',
+  intoWidth: 'Across ({n})',
+  intoHeight: 'Down ({n})',
+  noFit: 'Does not fit',
+  fitMax: 'Most that fit: <b>{x} across × {y} down, {t} in total.</b>',
+  print: 'Printing',
+  modeBoth: 'Colours + symbols',
+  modeSym: 'Symbols only (black & white)',
+  modeCol: 'Colours only',
+  downloadPdf: '⬇ Download PDF',
+  openPdf: '🖨 Open PDF to print',
+  pdfWorking: 'Preparing PDF…',
+  pdfFailed: 'Could not create the PDF.',
+  popupBlocked: 'The browser blocked the new window – the PDF was downloaded instead.',
+  file: 'File',
+  newPattern: 'New pattern',
+  save: 'Save to file',
+  open: 'Open file…',
+  notAPattern: 'Not a pattern file: {why}',
+  defaultTitle: 'Cross-stitch pattern',
+  sampleTitle: 'Snowflake (sample)',
+  sampleDesc: 'Red (e.g. DMC 321)',
+  firstDesc: 'Red',
+  legend: 'Legend',
+  descr: 'Description',
+  count: 'Stitches',
+  page: 'Page {i} / {n}',
+  colsRows: 'columns {c0}–{c1}, rows {r0}–{r1}',
+  overview: 'Page layout',
+  canvasLabel: 'Pattern grid. Arrow keys move, Space draws, Delete erases, F fills, 1–9 pick a colour.',
+  cellEmpty: 'empty',
+  cellAt: 'Row {r}, column {c}: {v}',
+  framed: '<b>Preview mode:</b> downloads may not work here. Download this file and open it in your browser.',
+  hint: 'Click or drag across the grid. The right mouse button erases. Keyboard: arrows, Space, Delete, F, digits 1–9. Ctrl+wheel zooms. Work is saved automatically in this browser – use <b>Save to file</b> for a copy or to move it to another computer.',
+};
+
+const dicts = { lt, en } as const;
+export type Lang = keyof typeof dicts;
+export const LANGS: Lang[] = ['lt', 'en'];
+const LANG_KEY = 'stitch-pattern-lang';
+
+let lang: Lang = (() => {
+  try {
+    const s = localStorage.getItem(LANG_KEY);
+    if (s && s in dicts) return s as Lang;
+  } catch { /* storage unavailable */ }
+  return 'lt';
+})();
+
+export const getLang = () => lang;
+export function setLang(l: Lang) {
+  lang = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch { /* ignore */ }
+}
+
+export function t(key: Key, params: Record<string, string | number> = {}, l: Lang = lang): string {
+  return dicts[l][key].replace(/\{(\w+)\}/g, (_, k) => String(params[k] ?? ''));
+}
+
+/** Fill every [data-i18n] / [data-i18n-html] / [data-i18n-attr="attr:key"] element. */
+export function applyI18n(root: ParentNode = document) {
+  document.documentElement.lang = lang;
+  document.title = t('appTitle');
+  root.querySelectorAll<HTMLElement>('[data-i18n]').forEach((el) => (el.textContent = t(el.dataset.i18n as Key)));
+  // Only our own dictionary strings (trusted) are used as HTML.
+  root.querySelectorAll<HTMLElement>('[data-i18n-html]').forEach((el) => (el.innerHTML = t(el.dataset.i18nHtml as Key)));
+  root.querySelectorAll<HTMLElement>('[data-i18n-attr]').forEach((el) => {
+    for (const pair of el.dataset.i18nAttr!.split(';')) {
+      const [attr, key] = pair.split(':');
+      el.setAttribute(attr, t(key as Key));
+    }
+  });
+}
