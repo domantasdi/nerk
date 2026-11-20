@@ -21,16 +21,27 @@ export function loadSaved(): Doc | null {
 let timer: ReturnType<typeof setTimeout> | undefined;
 let pending: (() => Doc) | null = null;
 
+export type SaveStatus = 'pending' | 'saved' | 'error';
+let statusListener: (s: SaveStatus) => void = () => {};
+/** Autosave state for the "saved" indicator. */
+export const onSaveStatus = (fn: (s: SaveStatus) => void) => { statusListener = fn; };
+
 export function flush() {
   clearTimeout(timer);
   if (!pending) return;
-  try { localStorage.setItem(KEY, JSON.stringify(serialize(pending()))); } catch { /* private mode / quota */ }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(serialize(pending())));
+    statusListener('saved');
+  } catch {
+    statusListener('error'); // private mode / quota / blocked storage
+  }
   pending = null;
 }
 
 /** Debounced save; call on every change. */
 export function scheduleSave(get: () => Doc) {
   pending = get;
+  statusListener('pending');
   clearTimeout(timer);
   timer = setTimeout(flush, 300);
 }

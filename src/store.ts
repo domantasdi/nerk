@@ -3,7 +3,8 @@ import { floodRegion, mirrored } from './geometry';
 import { CellRecorder, History, metaOf, sameMeta, type Change, type Meta } from './history';
 import { MAX_ENTRIES, cloneDoc, nextEntry, removeEntry, type Doc, type Entry, type MirrorMode } from './model';
 
-export type Tool = 'pen' | 'erase' | 'fill';
+export type Tool = 'pen' | 'erase' | 'fill' | 'pick';
+export const TOOLS: Tool[] = ['pen', 'erase', 'fill', 'pick'];
 export type StoreEvent =
   | { type: 'cells'; idx: Iterable<number> }
   | { type: 'meta' } // title / palette changed
@@ -42,6 +43,13 @@ export class Store {
     if (own) this.endStroke();
   }
   paintMany(idx: number[], v: number) { for (const i of idx) this.paint(i, v); }
+  /** Abort the stroke in progress and restore its cells (e.g. a second finger turned it into a pinch). */
+  cancelStroke() {
+    if (!this.rec) return;
+    const changed = this.rec.revert(this.doc.cells);
+    this.rec = null;
+    if (changed.length) this.emit({ type: 'cells', idx: changed });
+  }
   endStroke() {
     if (!this.rec) return;
     const c = this.rec.finish(this.doc.cells);
@@ -103,7 +111,7 @@ export class Store {
   select(i: number) {
     if (i < 0 || i >= this.doc.entries.length) return;
     this.sel = i;
-    if (this.tool === 'erase') this.tool = 'pen';
+    if (this.tool === 'erase' || this.tool === 'pick') this.tool = 'pen';
     this.emit({ type: 'ui' });
   }
   setTool(t: Tool) { this.tool = t; this.emit({ type: 'ui' }); }

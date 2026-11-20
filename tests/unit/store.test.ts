@@ -41,6 +41,18 @@ describe('Store history', () => {
     expect(s.doc.title).toBe('T');
     expect(s.history.canUndo).toBe(false);
   });
+  it('cancelStroke restores cells and records nothing (pinch started mid-stroke)', () => {
+    const s = mk();
+    s.paint(5, 0);
+    s.beginStroke();
+    s.paintMany([5, 6, 7], -1);
+    s.paintMany([8], 0);
+    s.cancelStroke();
+    expect(Array.from(s.doc.cells.slice(5, 9))).toEqual([0, -1, -1, -1]);
+    s.undo();
+    expect(s.doc.cells[5]).toBe(-1);
+    expect(s.history.canUndo).toBe(false);
+  });
   it('mirrors strokes', () => {
     const s = mk();
     s.setMirror('both');
