@@ -46,6 +46,11 @@ export class History {
 export class CellRecorder {
   private before = new Map<number, number>();
   record(i: number, prev: number) { if (!this.before.has(i)) this.before.set(i, prev); }
+  /** Puts every recorded cell back; returns the indices restored. */
+  revert(cells: Int16Array): number[] {
+    for (const [i, b] of this.before) cells[i] = b;
+    return [...this.before.keys()];
+  }
   /** Builds the change against the current cells, or null if nothing actually changed. */
   finish(cells: Int16Array): Change | null {
     const idx: number[] = [], from: number[] = [], to: number[] = [];

@@ -8,6 +8,51 @@
 <link rel="stylesheet" href="./src/styles.css">
 </head>
 <body>
+<main class="desk">
+  <header class="bar">
+    <input id="title" data-i18n-attr="aria-label:patternTitle" maxlength="120" autocomplete="off">
+    <span class="muted" id="dims"></span>
+    <span class="savestate" id="savestate" aria-live="polite"></span>
+    <button class="btn icon" id="helpbtn" data-i18n-attr="aria-label:help;title:help" aria-haspopup="dialog" aria-keyshortcuts="?"><i data-icon="help"></i></button>
+  </header>
+
+  <div class="toolbar" role="toolbar" data-i18n-attr="aria-label:tools">
+    <div class="seg" id="tools" role="group" data-i18n-attr="aria-label:tool">
+      <button class="btn tbtn" data-tool="pen" aria-keyshortcuts="B"><i data-icon="pen"></i><span data-i18n="pen"></span><kbd>B</kbd></button>
+      <button class="btn tbtn" data-tool="erase" aria-keyshortcuts="E"><i data-icon="erase"></i><span data-i18n="erase"></span><kbd>E</kbd></button>
+      <button class="btn tbtn" data-tool="fill" aria-keyshortcuts="G"><i data-icon="fill"></i><span data-i18n="fill"></span><kbd>G</kbd></button>
+      <button class="btn tbtn" data-tool="pick" aria-keyshortcuts="I"><i data-icon="pick"></i><span data-i18n="pick"></span><kbd>I</kbd></button>
+    </div>
+    <button class="btn chip" id="curcolor" type="button"><span class="chipsw"></span></button>
+    <div class="seg" id="mirror" role="group" data-i18n-attr="aria-label:mirror">
+      <button class="btn tbtn ic" data-m="none" data-i18n-attr="aria-label:mirrorNone;title:mirrorNone"><i data-icon="mirrorNone"></i></button>
+      <button class="btn tbtn ic" data-m="h" data-i18n-attr="aria-label:mirrorH;title:mirrorH"><i data-icon="mirrorH"></i></button>
+      <button class="btn tbtn ic" data-m="v" data-i18n-attr="aria-label:mirrorV;title:mirrorV"><i data-icon="mirrorV"></i></button>
+      <button class="btn tbtn ic" data-m="both" data-i18n-attr="aria-label:mirrorBoth;title:mirrorBoth"><i data-icon="mirrorBoth"></i></button>
+    </div>
+    <div class="seg" role="group" data-i18n-attr="aria-label:history">
+      <button class="btn tbtn ic" id="undo" aria-keyshortcuts="Control+Z" data-i18n-attr="aria-label:undo"><i data-icon="undo"></i></button>
+      <button class="btn tbtn ic" id="redo" aria-keyshortcuts="Control+Shift+Z" data-i18n-attr="aria-label:redo"><i data-icon="redo"></i></button>
+    </div>
+    <div class="seg zoom" role="group" data-i18n-attr="aria-label:zoom">
+      <button class="btn tbtn ic" id="zout" aria-keyshortcuts="-" data-i18n-attr="aria-label:zoomOut;title:zoomOut"><i data-icon="zoomOut"></i></button>
+      <button class="btn tbtn ic" id="zfit" aria-keyshortcuts="0" data-i18n-attr="aria-label:zoomFit;title:zoomFit"><i data-icon="fit"></i></button>
+      <button class="btn tbtn ic" id="zin" aria-keyshortcuts="+" data-i18n-attr="aria-label:zoomIn;title:zoomIn"><i data-icon="zoomIn"></i></button>
+    </div>
+  </div>
+
+  <div class="canvaswrap" id="wrap">
+    <canvas id="grid" tabindex="0" role="application" data-i18n-attr="aria-label:canvasLabel"></canvas>
+  </div>
+  <div class="statusbar"><span id="coords" class="coords"></span><span class="muted" data-i18n="hintShort"></span></div>
+  <div id="live" class="sr" aria-live="polite"></div>
+
+  <section class="legend" aria-labelledby="legendh">
+    <h2 id="legendh" data-i18n="legend"></h2>
+    <ul id="legend"></ul>
+  </section>
+</main>
+
 <aside class="side">
   <div class="top">
     <div>
@@ -19,89 +64,86 @@
 
   <div id="notice" class="notice" role="status" hidden></div>
 
-  <h2 data-i18n="tool"></h2>
-  <div class="row" id="tools" role="group">
-    <button class="btn" data-tool="pen" data-i18n="pen"></button>
-    <button class="btn" data-tool="erase" data-i18n="erase"></button>
-    <button class="btn" data-tool="fill" data-i18n="fill"></button>
-  </div>
+  <section class="panel">
+    <h2><span data-i18n="colors"></span> <span id="pc" class="muted"></span></h2>
+    <ul class="pal" id="pal"></ul>
+    <div class="row"><button class="btn" id="add" data-i18n="addColor"></button></div>
+  </section>
 
-  <h2 data-i18n="mirror"></h2>
-  <div class="row" id="mirror" role="group">
-    <button class="btn" data-m="none" data-i18n="mirrorNone"></button>
-    <button class="btn" data-m="h" data-i18n="mirrorH"></button>
-    <button class="btn" data-m="v" data-i18n="mirrorV"></button>
-    <button class="btn" data-m="both" data-i18n="mirrorBoth"></button>
-  </div>
+  <section class="panel">
+    <h2 data-i18n="print"></h2>
+    <label class="sr" for="pmode" data-i18n="print"></label>
+    <select id="pmode" class="btn wide">
+      <option value="both" data-i18n="modeBoth"></option>
+      <option value="sym" data-i18n="modeSym"></option>
+      <option value="col" data-i18n="modeCol"></option>
+    </select>
+    <div class="row">
+      <button class="btn primary" id="pdfopen" aria-keyshortcuts="Control+P" data-i18n="openPdf"></button>
+      <button class="btn" id="pdfdl" data-i18n="downloadPdf"></button>
+    </div>
+  </section>
 
-  <h2><span data-i18n="colors"></span> <span id="pc" class="muted"></span></h2>
-  <ul class="pal" id="pal"></ul>
-  <div class="row"><button class="btn" id="add" data-i18n="addColor"></button></div>
+  <details class="panel" id="pattern-panel">
+    <summary><h2 data-i18n="pattern"></h2></summary>
+    <div class="row">
+      <button class="btn" id="save" aria-keyshortcuts="Control+S" data-i18n="save"></button>
+      <button class="btn" id="open" aria-keyshortcuts="Control+O" data-i18n="open"></button>
+      <input type="file" id="file" accept=".json,application/json" hidden>
+    </div>
+    <div class="row">
+      <button class="btn" id="new" data-i18n="newPattern"></button>
+      <button class="btn" id="clear" data-i18n="clear"></button>
+    </div>
+    <h3 data-i18n="size"></h3>
+    <form class="fitin" id="sizeform">
+      <label><span data-i18n="width"></span><input type="number" id="gw" min="5" max="200" required inputmode="numeric"><span data-i18n="cells"></span></label>
+      <label><span data-i18n="height"></span><input type="number" id="gh" min="5" max="200" required inputmode="numeric"><span data-i18n="cells"></span></label>
+      <div class="row"><button class="btn" type="submit" data-i18n="applySize"></button></div>
+    </form>
+  </details>
 
-  <h2 data-i18n="edit"></h2>
-  <div class="row">
-    <button class="btn" id="undo" data-i18n="undo"></button>
-    <button class="btn" id="redo" data-i18n="redo"></button>
-    <button class="btn" id="clear" data-i18n="clear"></button>
-  </div>
-
-  <h2 data-i18n="size"></h2>
-  <form class="fitin" id="sizeform">
-    <label><span data-i18n="width"></span><input type="number" id="gw" min="5" max="200" required><span data-i18n="cells"></span></label>
-    <label><span data-i18n="height"></span><input type="number" id="gh" min="5" max="200" required><span data-i18n="cells"></span></label>
-    <div class="row"><button class="btn" type="submit" data-i18n="applySize"></button></div>
-  </form>
-
-  <h2 data-i18n="fit"></h2>
-  <div class="sub2" id="dsize"></div>
-  <div class="fitin">
-    <label><span data-i18n="fabricW"></span><input type="number" id="fw" min="1" value="50"><span data-i18n="cells"></span></label>
-    <label><span data-i18n="fabricH"></span><input type="number" id="fh" min="1" value="50"><span data-i18n="cells"></span></label>
-    <label><span data-i18n="minGap"></span><input type="number" id="fg" min="0" value="1"><span data-i18n="cells"></span></label>
-  </div>
-  <div id="fitout"></div>
-
-  <h2 data-i18n="print"></h2>
-  <select id="pmode" class="btn wide">
-    <option value="both" data-i18n="modeBoth"></option>
-    <option value="sym" data-i18n="modeSym"></option>
-    <option value="col" data-i18n="modeCol"></option>
-  </select>
-  <div class="row">
-    <button class="btn primary" id="pdfopen" data-i18n="openPdf"></button>
-    <button class="btn" id="pdfdl" data-i18n="downloadPdf"></button>
-  </div>
-
-  <h2 data-i18n="file"></h2>
-  <div class="row">
-    <button class="btn" id="new" data-i18n="newPattern"></button>
-    <button class="btn" id="save" data-i18n="save"></button>
-    <button class="btn" id="open" data-i18n="open"></button>
-    <input type="file" id="file" accept=".json,application/json" hidden>
-  </div>
-
-  <p class="hint" data-i18n-html="hint"></p>
+  <details class="panel" id="fit-panel">
+    <summary><h2 data-i18n="fit"></h2></summary>
+    <div class="sub2" id="dsize"></div>
+    <div class="fitin">
+      <label><span data-i18n="fabricW"></span><input type="number" id="fw" min="1" value="50" inputmode="numeric"><span data-i18n="cells"></span></label>
+      <label><span data-i18n="fabricH"></span><input type="number" id="fh" min="1" value="50" inputmode="numeric"><span data-i18n="cells"></span></label>
+      <label><span data-i18n="minGap"></span><input type="number" id="fg" min="0" value="1" inputmode="numeric"><span data-i18n="cells"></span></label>
+    </div>
+    <div id="fitout"></div>
+  </details>
 </aside>
 
-<main class="desk">
-  <div class="bar">
-    <input id="title" data-i18n-attr="aria-label:patternTitle" maxlength="120">
-    <span class="muted" id="dims"></span>
-    <span class="zoom" role="group" data-i18n-attr="aria-label:zoom">
-      <button class="btn sm" id="zout" data-i18n-attr="aria-label:zoomOut">−</button>
-      <button class="btn sm" id="zfit" data-i18n="zoomFit"></button>
-      <button class="btn sm" id="zin" data-i18n-attr="aria-label:zoomIn">+</button>
-    </span>
+<div id="toast" class="toast" hidden></div>
+
+<dialog id="help" aria-labelledby="helph">
+  <div class="dhead">
+    <h2 id="helph" data-i18n="helpTitle"></h2>
+    <button class="btn icon" id="helpclose" data-i18n-attr="aria-label:close"><i data-icon="close"></i></button>
   </div>
-  <div class="canvaswrap" id="wrap">
-    <canvas id="grid" tabindex="0" role="application" data-i18n-attr="aria-label:canvasLabel"></canvas>
-  </div>
-  <div id="live" class="sr" aria-live="polite"></div>
-  <section class="legend">
-    <h3 data-i18n="legend"></h3>
-    <ul id="legend"></ul>
-  </section>
-</main>
+  <h3 data-i18n="shortcutsTitle"></h3>
+  <table class="keys">
+    <tr><td><kbd>B</kbd></td><td data-i18n="scPen"></td></tr>
+    <tr><td><kbd>E</kbd></td><td data-i18n="scErase"></td></tr>
+    <tr><td><kbd>G</kbd></td><td data-i18n="scFill"></td></tr>
+    <tr><td><kbd>I</kbd></td><td data-i18n="scPick"></td></tr>
+    <tr><td><kbd>M</kbd></td><td data-i18n="scMirror"></td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td data-i18n="scColors"></td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td data-i18n="scUndo"></td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td data-i18n="scSave"></td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td data-i18n="scOpen"></td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td data-i18n="scPrint"></td></tr>
+    <tr><td><kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd></td><td data-i18n="scZoom"></td></tr>
+    <tr><td><kbd>?</kbd></td><td data-i18n="scHelp"></td></tr>
+  </table>
+  <h3 data-i18n="mouseTitle"></h3>
+  <ul><li data-i18n="mAlt"></li><li data-i18n="mRight"></li><li data-i18n="mPan"></li><li data-i18n="mZoom"></li></ul>
+  <h3 data-i18n="keysTitle"></h3>
+  <ul><li data-i18n="kMove"></li><li data-i18n="kDraw"></li></ul>
+  <h3 data-i18n="tipsTitle"></h3>
+  <ul><li data-i18n="tip1"></li><li data-i18n="tip2"></li><li data-i18n="tip3"></li></ul>
+</dialog>
 
 <script type="module" src="./src/main.ts"></script>
 </body>

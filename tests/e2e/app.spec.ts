@@ -18,6 +18,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await page.evaluate(() => document.querySelectorAll('details.panel').forEach((d) => ((d as HTMLDetailsElement).open = true)));
   await page.click('#new');
 });
 
@@ -80,7 +81,7 @@ test('keyboard drawing', async ({ page }) => {
 test('a crafted pattern file is rejected and nothing is injected', async ({ page }) => {
   const evil = { entries: [{ color: '"><img src=x onerror="window.__pwned=1">', sym: '✕', desc: '<img src=x onerror="window.__pwned=1">' }], cells: Array(900).fill(-1) };
   await page.setInputFiles('#file', { name: 'evil.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(evil)) });
-  await expect(page.locator('#notice')).toContainText('color');
+  await expect(page.locator('#toast')).toContainText('color');
   // a valid colour but HTML in the description is shown as text
   evil.entries[0].color = '#00ff00';
   await page.setInputFiles('#file', { name: 'evil2.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(evil)) });
@@ -137,9 +138,9 @@ test('PDF download is a real PDF', async ({ page }) => {
 
 test('language switch', async ({ page }) => {
   await page.selectOption('#lang', 'en');
-  await expect(page.locator('[data-tool=pen]')).toHaveText('Draw');
+  await expect(page.locator('[data-tool=pen] span')).toHaveText('Draw');
   await page.selectOption('#lang', 'lt');
-  await expect(page.locator('[data-tool=pen]')).toHaveText('Piešti');
+  await expect(page.locator('[data-tool=pen] span')).toHaveText('Piešti');
 });
 
 test('the built single file works offline from disk with no network requests', async ({ browser }) => {
@@ -151,7 +152,7 @@ test('the built single file works offline from disk with no network requests', a
   page.on('pageerror', (e) => errors.push(e.message));
   const file = fileURLToPath(new URL('../../dist/index.html', import.meta.url));
   await page.goto('file://' + file);
-  await expect(page.locator('[data-tool=pen]')).toHaveText('Piešti');
+  await expect(page.locator('[data-tool=pen] span')).toHaveText('Piešti');
   expect(await page.evaluate(async () => { await document.fonts.ready; return document.fonts.check('700 12px Lato', 'ėįų'); })).toBe(true);
   expect(external).toEqual([]);
   expect(errors).toEqual([]);
@@ -167,6 +168,111 @@ test('hosted over http it installs a service worker and reloads offline', async 
   await page.reload(); // let the worker take control and cache the page
   await ctx.setOffline(true);
   await page.reload();
-  await expect(page.locator('[data-tool=pen]')).toHaveText('Piešti');
+  await expect(page.locator('[data-tool=pen] span')).toHaveText('Piešti');
   await ctx.close();
+});
+
+test('destructive actions offer Undo in a toast instead of a dialog', async ({ page }) => {
+  const p = await cellXY(page, 4, 4);
+  await page.mouse.click(p.x, p.y);
+  await page.click('#clear');
+  await expect(page.locator('#toast')).toBeVisible();
+  expect(await cell(page, 4, 4)).toBe(-1);
+  await page.locator('#toast .tact').click();
+  expect(await cell(page, 4, 4)).toBe(0);
+  await expect(page.locator('#toast')).toBeHidden();
+});
+
+test('tool, mirror, colour and zoom shortcuts', async ({ page }) => {
+  await page.click('#add');
+  await page.locator('#grid').focus();
+  await page.keyboard.press('e');
+  await expect(page.locator('[data-tool=erase]')).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('g');
+  await expect(page.locator('[data-tool=fill]')).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('b');
+  await expect(page.locator('[data-tool=pen]')).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('m');
+  await expect(page.locator('[data-m=h]')).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('1');
+  expect(await page.evaluate(() => (window as unknown as Win).__store.sel)).toBe(0);
+  const before = await page.evaluate(() => (window as unknown as Win).__view.cell);
+  await page.keyboard.press('+');
+  expect(await page.evaluate(() => (window as unknown as Win).__view.cell)).toBeGreaterThan(before);
+  await page.keyboard.press('0');
+  expect(await page.evaluate(() => (window as unknown as Win).__view.cell)).toBe(before);
+  // letters typed into a text field are not shortcuts
+  await page.click('.ent input[type=text]');
+  await page.keyboard.type('e');
+  await expect(page.locator('[data-tool=pen]')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('eyedropper and Alt+click pick a colour from the grid', async ({ page }) => {
+  await page.click('#add'); // colour 2 selected
+  await page.keyboard.press('Enter');
+  const a = await cellXY(page, 3, 3), b = await cellXY(page, 6, 6);
+  await page.mouse.click(a.x, a.y); // colour 2 at (3,3)
+  await page.keyboard.press('1');
+  await page.mouse.click(b.x, b.y); // colour 1 at (6,6)
+  await page.keyboard.down('Alt');
+  await page.mouse.click(a.x, a.y);
+  await page.keyboard.up('Alt');
+  expect(await page.evaluate(() => (window as unknown as Win).__store.sel)).toBe(1);
+  await page.click('[data-tool=pick]');
+  await page.mouse.click(b.x, b.y);
+  expect(await page.evaluate(() => (window as unknown as Win).__store.sel)).toBe(0);
+  await expect(page.locator('[data-tool=pen]')).toHaveAttribute('aria-pressed', 'true');
+  expect(await cell(page, 6, 6)).toBe(0); // picking does not paint
+});
+
+test('symbol picker: keyboard choice and duplicate warning', async ({ page }) => {
+  await page.click('#add');
+  await page.click('.ent:nth-child(2) .symsel');
+  await expect(page.locator('.sympop')).toBeVisible();
+  await expect(page.locator('.symbtn.used')).toHaveCount(1); // the cross used by colour 1
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.sympop')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as Win).__store.doc.entries[1].sym)).toBe('square');
+  // choose the same symbol as colour 1 → warning shown
+  await page.click('.ent:nth-child(2) .symsel');
+  await page.locator('.symbtn[data-id=cross]').click();
+  await expect(page.locator('.ent:nth-child(2) .dup')).toBeVisible();
+  await page.keyboard.press('Control+z');
+  await expect(page.locator('.ent:nth-child(2) .dup')).toBeHidden();
+  await page.click('.ent:nth-child(2) .symsel');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.sympop')).toHaveCount(0);
+  await expect(page.locator('.ent:nth-child(2) .symsel')).toBeFocused();
+});
+
+test('help dialog opens with ? and closes with Escape', async ({ page }) => {
+  await page.locator('#grid').focus();
+  await page.keyboard.press('?');
+  await expect(page.locator('#help')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#help')).toBeHidden();
+  await page.click('#helpbtn');
+  await expect(page.locator('#help')).toBeVisible();
+});
+
+test('autosave indicator and coordinates in the status bar', async ({ page }) => {
+  const p = await cellXY(page, 0, 0);
+  await page.mouse.move(p.x, p.y);
+  await expect(page.locator('#coords')).toHaveText('Eil. 30, stulp. 1');
+  await page.mouse.click(p.x, p.y);
+  await expect(page.locator('#savestate')).toContainText('Išsaugota');
+});
+
+test('Ctrl+wheel zooms around the pointer', async ({ page }) => {
+  // Once the grid is larger than the view, the cell under the pointer must stay put.
+  await page.locator('#grid').focus();
+  for (let k = 0; k < 3; k++) await page.keyboard.press('+');
+  const p = await cellXY(page, 12, 13);
+  await page.mouse.move(p.x, p.y);
+  await page.keyboard.down('Control');
+  for (let k = 0; k < 6; k++) await page.mouse.wheel(0, -100);
+  await page.keyboard.up('Control');
+  const after = await page.evaluate(([x, y]) => (window as unknown as Win).__view.cellAt(x, y), [p.x, p.y]);
+  expect(after).toBe(12 * 30 + 13); // same cell still under the pointer
 });

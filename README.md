@@ -33,8 +33,20 @@ Before the first `test:e2e`, run `npx playwright install chromium` (or set `PW_C
 | `src/fonts.ts` | Bundled Lato TTF, used by both the page and the PDF |
 | `src/i18n.ts` | LT / EN texts |
 | `src/storage.ts` | Debounced localStorage save; picks up the original app's `stitch-pattern-v1` key |
-| `src/main.ts` | DOM wiring |
+| `src/ui/canvasInput.ts` | Drawing, eyedropper, pinch/pan, zoom around the pointer, keyboard cursor |
+| `src/ui/toast.ts` | Notifications with Undo (replaces confirm dialogs) |
+| `src/ui/symbolPicker.ts` | Visual symbol picker popover |
+| `src/ui/icons.ts`, `src/ui/dom.ts` | Inline SVG icons, DOM helpers |
+| `src/main.ts` | Wiring: palette, panels, shortcuts, files, PDF, help dialog |
 | `scripts/make-fonts.py` | Rebuilds `src/assets/fonts/*.ttf` from the `lato-font` package (Lato 2.0, OFL) |
+
+## Keyboard shortcuts
+
+`B` draw · `E` eraser · `G` fill · `I` eyedropper · `M` mirror mode · `1`–`9` colour ·
+`Ctrl+Z` / `Ctrl+Shift+Z` undo/redo · `Ctrl+S` save · `Ctrl+O` open · `Ctrl+P` PDF ·
+`+` `−` `0` zoom · `?` help. On the grid: arrows, `Space`/`Enter`, `Delete`, `F`.
+Mouse: Alt+click picks a colour, right button erases, middle-drag pans, Ctrl+wheel zooms.
+Touch: two fingers pan and pinch-zoom.
 
 ## File format (v2)
 
