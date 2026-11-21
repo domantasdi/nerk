@@ -32,13 +32,31 @@ Before the first `test:e2e`, run `npx playwright install chromium` (or set `PW_C
 | `src/symbols.ts` | Symbols as SVG paths, used by the screen, the swatches and the PDF |
 | `src/fonts.ts` | Bundled Lato TTF, used by both the page and the PDF |
 | `src/i18n.ts` | LT / EN texts |
-| `src/storage.ts` | Debounced localStorage save; picks up the original app's `stitch-pattern-v1` key |
+| `src/library.ts` | Pattern library (IndexedDB → localStorage → memory fallback) and debounced autosave |
+| `src/share.ts` | Share links: pattern compressed into the URL fragment `#p=…`, strictly validated on open |
+| `src/storage.ts` | localStorage helpers; moves the single autosave slot of earlier versions into the library |
+| `src/ui/libraryDialog.ts`, `src/ui/shareDialog.ts` | "My patterns" and "Share" dialogs |
 | `src/ui/canvasInput.ts` | Drawing, eyedropper, pinch/pan, zoom around the pointer, keyboard cursor |
 | `src/ui/toast.ts` | Notifications with Undo (replaces confirm dialogs) |
 | `src/ui/symbolPicker.ts` | Visual symbol picker popover |
 | `src/ui/icons.ts`, `src/ui/dom.ts` | Inline SVG icons, DOM helpers |
 | `src/main.ts` | Wiring: palette, panels, shortcuts, files, PDF, help dialog |
 | `scripts/make-fonts.py` | Rebuilds `src/assets/fonts/*.ttf` from the `lato-font` package (Lato 2.0, OFL) |
+
+## Pattern library and share links
+
+All patterns are stored in the browser (IndexedDB) under **My patterns**. Opening a file or a
+share link adds a new pattern and never overwrites the open one. Undo history is kept per pattern.
+
+**Share link** puts the whole pattern into the part of the URL after `#`, which browsers never send
+to a server. A 30×30 pattern makes a link of about 320 characters. When the app is opened from disk,
+links point to the public copy at `https://domantasdi.github.io/nerk/`; set `VITE_PUBLIC_URL` at build
+time to change that.
+
+### Publishing (GitHub Pages)
+
+`.github/workflows/pages.yml` runs the unit tests, builds, and deploys on every push to `main`.
+One-time setup: repository **Settings → Pages → Source: GitHub Actions**.
 
 ## Keyboard shortcuts
 

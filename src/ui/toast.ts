@@ -26,6 +26,14 @@ export function toast(msg: string, opts: ToastOpts = {}) {
   x.setAttribute('aria-label', t('close'));
   x.onclick = close;
   kids.push(x);
+  // A modal dialog makes the rest of the page inert, so show the toast inside it (and move it back on close).
+  const modal = [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')].pop();
+  const host = modal ?? document.body;
+  if (box.parentElement !== host) host.append(box);
+  if (modal && !modal.dataset.toastHome) {
+    modal.dataset.toastHome = '1';
+    modal.addEventListener('close', () => { if (box.parentElement === modal) document.body.append(box); });
+  }
   box.replaceChildren(...kids);
   box.classList.toggle('err', !!opts.error);
   box.setAttribute('role', opts.error ? 'alert' : 'status');
