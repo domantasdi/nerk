@@ -2,20 +2,81 @@ import { loadPageFonts } from './fonts';
 import { FormatError, fileName, parseDoc, serialize } from './format';
 import { fitRows } from './geometry';
 import { LANGS, applyI18n, getLang, setLang, t, type Lang } from './i18n';
-import { EMPTY, MAX_ENTRIES, MAX_SIZE, MIN_SIZE, bbox, blankDoc, counts, resizeDoc, samplePattern, textOn, type MirrorMode } from './model';
+import { EMPTY, MAX_ENTRIES, MAX_SIZE, MIN_SIZE, bbox, blankDoc, counts, resizeDoc, samplePattern, textOn, type Doc, type MirrorMode } from './model';
 import { buildPdf, type PrintMode } from './pdf';
-import { FIT_KEY, flush, loadSaved, onSaveStatus, readJSON, scheduleSave, writeJSON } from './storage';
+import { AutoSaver, newId, openLibrary, type PatternMeta } from './library';
+import { HASH_KEY, decodeShare, fingerprint } from './share';
+import { CURRENT_KEY, FIT_KEY, readJSON, takeLegacyDoc, writeJSON } from './storage';
 import { Store, TOOLS, type Tool } from './store';
 import { SYMBOLS, symbolSvg } from './symbols';
 import { attachCanvasInput, zoomCentre } from './ui/canvasInput';
 import { $, h, isTyping } from './ui/dom';
 import { hydrateIcons, icon } from './ui/icons';
+import { createLibraryDialog } from './ui/libraryDialog';
+import { createShareDialog } from './ui/shareDialog';
 import { closeSymbolPicker, openSymbolPicker } from './ui/symbolPicker';
 import { toast } from './ui/toast';
 import { GridView } from './view';
 
+/* ---------- pattern library: pick the pattern to show ---------- */
+function makeThumb(d: Doc): string {
+  const s = Math.max(1, Math.floor(96 / Math.max(d.width, d.height)));
+  const c = document.createElement('canvas');
+  c.width = d.width * s;
+  c.height = d.height * s;
+  const x = c.getContext('2d');
+  if (!x) return '';
+  x.fillStyle = '#fff';
+  x.fillRect(0, 0, c.width, c.height);
+  d.cells.forEach((v, i) => {
+    if (v < 0) return;
+    x.fillStyle = d.entries[v].color;
+    x.fillRect((i % d.width) * s, Math.floor(i / d.width) * s, s, s);
+  });
+  return c.toDataURL('image/png');
+}
+
+const lib = await openLibrary(makeThumb);
+const legacy = takeLegacyDoc(); // single autosave slot of earlier versions → first library entry
+if (legacy && !lib.list().length) writeJSON(CURRENT_KEY, (await lib.create(legacy)).id);
+
+/** A share link in the address bar (#p=…) is read once and removed, so a reload doesn't import it again. */
+async function takeSharedFromUrl(): Promise<{ doc: Doc; source: string } | 'broken' | null> {
+  if (!location.hash.startsWith(`#${HASH_KEY}=`)) return null;
+  const raw = location.hash;
+  history.replaceState(null, '', location.pathname + location.search);
+  try {
+    const doc = await decodeShare(raw);
+    return doc ? { doc, source: fingerprint(raw) } : null;
+  } catch {
+    return 'broken';
+  }
+}
+const sharedAtStart = await takeSharedFromUrl();
+let sharedWasKnown = false;
+
+async function initialPattern(): Promise<{ id: string; doc: Doc }> {
+  // Arriving through a share link: show that pattern (and don't create the sample next to it).
+  if (sharedAtStart && sharedAtStart !== 'broken') {
+    const existing = lib.findBySource(sharedAtStart.source), doc = existing && (await lib.get(existing.id));
+    if (existing && doc) { sharedWasKnown = true; return { id: existing.id, doc }; }
+    return { id: (await lib.create(sharedAtStart.doc, { source: sharedAtStart.source })).id, doc: sharedAtStart.doc };
+  }
+  const saved = readJSON<string>(CURRENT_KEY);
+  for (const id of [saved, ...lib.list().map((m) => m.id)]) {
+    if (!id || !lib.meta(id)) continue;
+    const doc = await lib.get(id);
+    if (doc) return { id, doc };
+  }
+  const doc = samplePattern(t('sampleTitle'), t('sampleDesc'));
+  return { id: (await lib.create(doc)).id, doc };
+}
+const initial = await initialPattern();
+let currentId = initial.id;
+writeJSON(CURRENT_KEY, currentId);
+
 /* ---------- state ---------- */
-const store = new Store(loadSaved() ?? samplePattern(t('sampleTitle'), t('sampleDesc')));
+const store = new Store(initial.doc);
 const canvas = $<HTMLCanvasElement>('#grid');
 const view = new GridView(canvas, () => store.doc);
 const wrap = $('#wrap');
@@ -222,15 +283,58 @@ store.on((ev) => {
     const size = `${store.doc.width}x${store.doc.height}`;
     if (size !== lastSize) { lastSize = size; fitZoom(); }
   } else renderUi();
-  if (ev.type !== 'ui') scheduleSave(() => store.doc);
+  if (ev.type !== 'ui' && !switching) saver.schedule();
 });
 
-/* ---------- autosave indicator ---------- */
+/* ---------- autosave + other tabs ---------- */
 const saveState = $('#savestate');
-onSaveStatus((s) => {
+const tabId = newId();
+const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('stitch-patterns') : null;
+const saver = new AutoSaver(lib, () => ({ id: currentId, doc: store.doc }), (s, meta) => {
   saveState.textContent = s === 'pending' ? t('saving') : s === 'saved' ? '✓ ' + t('savedLocal') : t('saveFailed');
   saveState.classList.toggle('err', s === 'error');
+  if (s === 'saved' && meta) {
+    channel?.postMessage({ type: 'saved', id: meta.id, tab: tabId });
+    libDialog.render();
+    requestPersistentStorage();
+  }
 });
+let persistAsked = false;
+function requestPersistentStorage() {
+  // Ask once so the browser doesn't evict the library under storage pressure.
+  if (persistAsked || !navigator.storage?.persist) return;
+  persistAsked = true;
+  navigator.storage.persist().catch(() => {});
+}
+if (channel) channel.onmessage = async (e: MessageEvent<{ type: string; id: string; tab: string }>) => {
+  if (e.data?.tab === tabId) return;
+  await lib.load(); // pick up the other tab's changes
+  libDialog.render();
+  if (e.data.type === 'saved' && e.data.id === currentId)
+    toast(t('otherTab'), { action: { label: t('reload'), run: () => { saver.discard(); void switchTo(currentId, undefined, false); } }, timeout: 15_000 });
+};
+
+/** Show another library pattern (saves the current one first). Undo history is per pattern. */
+let switching = false;
+async function switchTo(id: string, doc?: Doc, saveFirst = true): Promise<boolean> {
+  if (saveFirst) await saver.flush();
+  const d = doc ?? (await lib.get(id));
+  if (!d) return false;
+  currentId = id;
+  writeJSON(CURRENT_KEY, id);
+  switching = true;
+  try { store.replaceDoc(d, false); } finally { switching = false; }
+  libDialog.render();
+  return true;
+}
+
+/** Add a pattern to the library, open it, and offer to undo (go back + remove it). */
+async function addAndOpen(doc: Doc, message: string, extra: Partial<PatternMeta> = {}) {
+  const prev = currentId;
+  const meta = await lib.create(doc, extra);
+  await switchTo(meta.id, doc);
+  toast(message, { action: { label: t('undoAction'), run: async () => { await switchTo(prev, undefined, false); await lib.remove(meta.id); libDialog.render(); } } });
+}
 
 /* ---------- title ---------- */
 const titleEl = $<HTMLInputElement>('#title');
@@ -300,7 +404,8 @@ $('#clear').onclick = () => {
   if (store.doc.cells.every((v) => v < 0)) return;
   undoable(() => store.replaceDoc({ ...store.doc, entries: store.doc.entries.map((e) => ({ ...e })), cells: new Int16Array(store.doc.cells.length).fill(EMPTY) }), t('cleared'));
 };
-$('#new').onclick = () => undoable(() => store.replaceDoc(blankDoc(store.doc.width, store.doc.height, t('defaultTitle'), t('firstDesc'))), t('newCreated'));
+const newPattern = () => addAndOpen(blankDoc(store.doc.width, store.doc.height, t('defaultTitle'), t('firstDesc')), t('newCreated'));
+$('#new').onclick = newPattern;
 
 $<HTMLFormElement>('#sizeform').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -339,7 +444,7 @@ $<HTMLInputElement>('#file').onchange = async (e) => {
   if (!f) return;
   try {
     const doc = parseDoc(JSON.parse(await f.text()));
-    undoable(() => store.replaceDoc(doc), t('opened', { name: doc.title || f.name }));
+    await addAndOpen(doc, t('imported', { name: doc.title || f.name }));
   } catch (err) {
     toast(t('notAPattern', { why: err instanceof FormatError ? err.message : 'JSON' }), { error: true });
   }
@@ -378,15 +483,66 @@ async function openPdf() {
 }
 $('#pdfopen').onclick = openPdf;
 
-/* ---------- help dialog ---------- */
+/* ---------- dialogs ---------- */
 const help = $<HTMLDialogElement>('#help');
 function toggleHelp() {
   if (help.open) help.close();
   else help.showModal();
 }
 $('#helpbtn').onclick = toggleHelp;
-$('#helpclose').onclick = () => help.close();
-help.addEventListener('click', (e) => { if (e.target === help) help.close(); }); // click on backdrop
+document.querySelectorAll<HTMLDialogElement>('dialog').forEach((d) => {
+  d.querySelector<HTMLElement>('.dclose')!.onclick = () => d.close();
+  d.addEventListener('click', (e) => { if (e.target === d) d.close(); }); // click on the backdrop
+});
+
+const libDialog = createLibraryDialog(lib, {
+  currentId: () => currentId,
+  open: (id) => void switchTo(id),
+  create: () => void newPattern(),
+  importFile: () => $('#file').click(),
+  duplicate: async (id) => {
+    await saver.flush();
+    const doc = await lib.get(id);
+    if (!doc) return;
+    doc.title = (doc.title || t('untitled')) + t('copySuffix');
+    await lib.create(doc);
+    libDialog.render();
+    toast(t('patternDuplicated', { name: doc.title }));
+  },
+  remove: async (id) => {
+    await saver.flush();
+    const meta = lib.meta(id), doc = await lib.get(id);
+    if (!meta || !doc) return;
+    await lib.remove(id);
+    channel?.postMessage({ type: 'deleted', id, tab: tabId });
+    if (id === currentId) {
+      const next = lib.list()[0];
+      if (next) await switchTo(next.id, undefined, false);
+      else {
+        const fresh = blankDoc(doc.width, doc.height, t('defaultTitle'), t('firstDesc'));
+        await switchTo((await lib.create(fresh)).id, fresh, false);
+      }
+    }
+    libDialog.render();
+    toast(t('patternDeleted', { name: meta.title || t('untitled') }), {
+      action: { label: t('undoAction'), run: async () => { await lib.restore(meta, doc); libDialog.render(); } },
+    });
+  },
+});
+$('#libbtn').onclick = async () => { await saver.flush(); libDialog.open(); }; // cards show the latest title/thumbnail
+
+const shareDialog = createShareDialog(() => store.doc);
+$('#sharebtn').onclick = () => void shareDialog.open();
+
+/* ---------- share links pasted into an already open tab ---------- */
+window.addEventListener('hashchange', async () => {
+  const shared = await takeSharedFromUrl();
+  if (!shared) return;
+  if (shared === 'broken') { toast(t('shareBroken'), { error: true }); return; }
+  const existing = lib.findBySource(shared.source);
+  if (existing && (await switchTo(existing.id))) { toast(t('shareAlready')); return; }
+  await addAndOpen(shared.doc, t('shareOpened', { name: shared.doc.title || t('untitled') }), { source: shared.source });
+});
 
 /* ---------- language ---------- */
 const langSel = $<HTMLSelectElement>('#lang');
@@ -408,8 +564,14 @@ renderUi();
 lastSize = `${store.doc.width}x${store.doc.height}`;
 requestAnimationFrame(fitZoom);
 loadPageFonts().then(() => view.invalidate(), () => {});
-window.addEventListener('pagehide', flush);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+window.addEventListener('pagehide', () => void saver.flush());
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') void saver.flush(); });
+if (lib.backend.kind === 'memory') {
+  $('#notice').textContent = t('storageMemory');
+  $('#notice').hidden = false;
+}
+if (sharedAtStart === 'broken') toast(t('shareBroken'), { error: true });
+else if (sharedAtStart) toast(sharedWasKnown ? t('shareAlready') : t('shareOpened', { name: sharedAtStart.doc.title || t('untitled') }));
 
 const framed = (() => { try { return window.self !== window.top; } catch { return true; } })();
 if (framed) {
@@ -424,4 +586,4 @@ if (location.protocol.startsWith('http') && 'serviceWorker' in navigator && !fra
 }
 
 // Exposed for end-to-end tests only.
-Object.assign(window, { __store: store, __view: view });
+Object.assign(window, { __store: store, __view: view, __lib: lib, __saver: saver });

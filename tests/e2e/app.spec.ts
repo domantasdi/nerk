@@ -20,6 +20,10 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
   await page.evaluate(() => document.querySelectorAll('details.panel').forEach((d) => ((d as HTMLDetailsElement).open = true)));
   await page.click('#new');
+  // "New" saves to the library and switches asynchronously; wait, then dismiss its toast.
+  await expect(page.locator('#toast')).toContainText('Sukurtas naujas raštas');
+  await expect(page.locator('#title')).toHaveValue('Kryželio raštas');
+  await page.locator('#toast .tclose').click();
 });
 
 test('a fast drag paints every cell in between, as one undo step', async ({ page }) => {
@@ -275,4 +279,121 @@ test('Ctrl+wheel zooms around the pointer', async ({ page }) => {
   await page.keyboard.up('Control');
   const after = await page.evaluate(([x, y]) => (window as unknown as Win).__view.cellAt(x, y), [p.x, p.y]);
   expect(after).toBe(12 * 30 + 13); // same cell still under the pointer
+});
+
+/* ---------- pattern library ---------- */
+const libCount = (page: Page) => page.evaluate(() => (window as any).__lib.list().length as number);
+
+test('library: switch, duplicate, delete with undo, and remember the open pattern', async ({ page }) => {
+  // beforeEach created a new blank pattern next to the sample
+  expect(await libCount(page)).toBe(2);
+  const p = await cellXY(page, 2, 2);
+  await page.mouse.click(p.x, p.y);
+  await page.fill('#title', 'Mano gėlės');
+  await page.locator('#grid').focus();
+
+  await page.click('#libbtn');
+  await expect(page.locator('.libcard')).toHaveCount(2);
+  await expect(page.locator('.libcard.current .lt')).toHaveText('Mano gėlės');
+  await page.locator('.libcard', { hasText: 'Snaigė' }).locator('.libopen').click();
+  await expect(page.locator('#title')).toHaveValue('Snaigė (pavyzdys)');
+  expect(await page.locator('#undo').isDisabled()).toBe(true); // undo history is per pattern
+
+  await page.click('#libbtn');
+  await page.locator('.libcard', { hasText: 'Mano gėlės' }).locator('.libopen').click();
+  await expect(page.locator('#title')).toHaveValue('Mano gėlės');
+  expect(await cell(page, 2, 2)).toBe(0); // edits were saved before switching
+
+  await page.click('#libbtn');
+  await page.locator('.libcard.current button[aria-label^="Kopijuoti"]').click();
+  await expect(page.locator('.libcard')).toHaveCount(3);
+  await expect(page.locator('.libcard .lt', { hasText: 'Mano gėlės (kopija)' })).toBeVisible();
+
+  // search (accent-insensitive)
+  await page.fill('#libsearch', 'geles');
+  await expect(page.locator('.libcard')).toHaveCount(2);
+  await page.fill('#libsearch', '');
+
+  await page.locator('.libcard', { hasText: 'Snaigė' }).locator('button[aria-label^="Ištrinti"]').click();
+  await expect(page.locator('.libcard')).toHaveCount(2);
+  await page.locator('#toast .tact').click();
+  await expect(page.locator('.libcard')).toHaveCount(3);
+  await page.keyboard.press('Escape');
+
+  await page.reload();
+  await expect(page.locator('#title')).toHaveValue('Mano gėlės');
+  expect(await libCount(page)).toBe(3);
+});
+
+test('deleting the open pattern switches to another one', async ({ page }) => {
+  await page.click('#libbtn');
+  await page.locator('.libcard.current button[aria-label^="Ištrinti"]').click();
+  await expect(page.locator('#title')).toHaveValue('Snaigė (pavyzdys)');
+  await expect(page.locator('.libcard')).toHaveCount(1);
+});
+
+test('opening a file adds a pattern instead of replacing the current one; Undo removes it', async ({ page }) => {
+  const before = await libCount(page);
+  const v2 = { version: 2, title: 'Iš failo', width: 10, height: 8, entries: [{ color: '#00838f', sym: 'dot', desc: 'Žydra' }], cells: Array(80).fill(0) };
+  await page.setInputFiles('#file', { name: 'x.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(v2)) });
+  await expect(page.locator('#title')).toHaveValue('Iš failo');
+  expect(await libCount(page)).toBe(before + 1);
+  await page.locator('#toast .tact').click();
+  await expect(page.locator('#title')).toHaveValue('Kryželio raštas');
+  expect(await libCount(page)).toBe(before);
+});
+
+test('the single autosave slot of the previous version becomes a library pattern', async ({ browser }) => {
+  const page = await (await browser.newContext()).newPage();
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('stitch-pattern-v2', JSON.stringify({ version: 2, title: 'Senas v2', width: 12, height: 12, entries: [{ color: '#2e7d32', sym: 'star', desc: '' }], cells: Array(144).fill(-1) }));
+  });
+  await page.goto('/');
+  await expect(page.locator('#title')).toHaveValue('Senas v2');
+  expect(await libCount(page)).toBe(1);
+  await page.reload();
+  expect(await libCount(page)).toBe(1); // migrated once only
+});
+
+/* ---------- share links ---------- */
+test('share link: copy, open elsewhere, no duplicates, broken links', async ({ browser, page }) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  const p = await cellXY(page, 5, 7);
+  await page.mouse.click(p.x, p.y);
+  await page.fill('#title', 'Dalinuosi');
+  await page.locator('#grid').focus();
+  await page.click('#sharebtn');
+  await expect(page.locator('#sharelink')).toHaveValue(/^http:\/\/localhost:4173\/#p=1\./);
+  const link = await page.inputValue('#sharelink');
+  await page.click('#sharecopy');
+  await expect(page.locator('#sharecopy')).toContainText('Nukopijuota');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
+  await page.keyboard.press('Escape');
+
+  // someone else opens it: only the shared pattern, no sample next to it
+  const other = await (await browser.newContext()).newPage();
+  await other.goto(link);
+  await expect(other.locator('#title')).toHaveValue('Dalinuosi');
+  await expect(other.locator('#toast')).toContainText('bendrintas');
+  expect(other.url()).toBe('http://localhost:4173/'); // link removed from the address bar
+  expect(await libCount(other)).toBe(1);
+  expect(await other.evaluate(() => (window as any).__store.doc.cells[5 * 30 + 7])).toBe(0);
+
+  // opening the same link again does not duplicate it
+  await other.goto(link);
+  await expect(other.locator('#toast')).toContainText('jau turite');
+  expect(await libCount(other)).toBe(1);
+
+  // pasting a link into an already open tab imports it there as a copy
+  const mine = await libCount(page);
+  await page.evaluate((h) => (location.hash = h), link.slice(link.indexOf('#') + 1));
+  await expect(page.locator('#toast')).toContainText('bendrintas');
+  expect(await libCount(page)).toBe(mine + 1);
+
+  // broken link
+  await other.goto('http://localhost:4173/#p=1.broken-link');
+  await expect(other.locator('#toast')).toContainText('sugadinta');
+  await expect(other.locator('#title')).toHaveValue('Dalinuosi');
 });

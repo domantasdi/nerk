@@ -10,9 +10,11 @@
 <body>
 <main class="desk">
   <header class="bar">
+    <button class="btn" id="libbtn" aria-haspopup="dialog"><i data-icon="library"></i><span data-i18n="library"></span></button>
     <input id="title" data-i18n-attr="aria-label:patternTitle" maxlength="120" autocomplete="off">
     <span class="muted" id="dims"></span>
     <span class="savestate" id="savestate" aria-live="polite"></span>
+    <button class="btn" id="sharebtn" aria-haspopup="dialog"><i data-icon="share"></i><span data-i18n="share"></span></button>
     <button class="btn icon" id="helpbtn" data-i18n-attr="aria-label:help;title:help" aria-haspopup="dialog" aria-keyshortcuts="?"><i data-icon="help"></i></button>
   </header>
 
@@ -87,12 +89,12 @@
   <details class="panel" id="pattern-panel">
     <summary><h2 data-i18n="pattern"></h2></summary>
     <div class="row">
+      <button class="btn" id="new" data-i18n="newPattern"></button>
       <button class="btn" id="save" aria-keyshortcuts="Control+S" data-i18n="save"></button>
       <button class="btn" id="open" aria-keyshortcuts="Control+O" data-i18n="open"></button>
       <input type="file" id="file" accept=".json,application/json" hidden>
     </div>
     <div class="row">
-      <button class="btn" id="new" data-i18n="newPattern"></button>
       <button class="btn" id="clear" data-i18n="clear"></button>
     </div>
     <h3 data-i18n="size"></h3>
@@ -117,10 +119,39 @@
 
 <div id="toast" class="toast" hidden></div>
 
+<dialog id="libdlg" class="wide" aria-labelledby="libh">
+  <div class="dhead">
+    <div><h2 id="libh" data-i18n="library"></h2><div class="muted small" id="libcount"></div></div>
+    <button class="btn icon dclose" data-i18n-attr="aria-label:close"><i data-icon="close"></i></button>
+  </div>
+  <div class="libtools">
+    <input type="search" id="libsearch" data-i18n-attr="placeholder:searchPatterns;aria-label:searchPatterns" autocomplete="off">
+    <button class="btn primary" id="libnew" data-i18n="newPattern"></button>
+    <button class="btn" id="libopen" data-i18n="open"></button>
+  </div>
+  <ul class="libgrid" id="libgrid"></ul>
+  <p class="muted" id="libempty" hidden data-i18n="noMatches"></p>
+</dialog>
+
+<dialog id="sharedlg" aria-labelledby="shareh">
+  <div class="dhead">
+    <h2 id="shareh" data-i18n="shareTitle"></h2>
+    <button class="btn icon dclose" data-i18n-attr="aria-label:close"><i data-icon="close"></i></button>
+  </div>
+  <p data-i18n="shareInfo"></p>
+  <label class="sr" for="sharelink" data-i18n="shareLink"></label>
+  <input id="sharelink" class="linkbox" readonly>
+  <p class="warnline" id="sharelong" hidden></p>
+  <div class="row">
+    <button class="btn primary" id="sharecopy" data-i18n="copyLink"></button>
+    <button class="btn" id="sharenative" hidden data-i18n="shareNative"></button>
+  </div>
+</dialog>
+
 <dialog id="help" aria-labelledby="helph">
   <div class="dhead">
     <h2 id="helph" data-i18n="helpTitle"></h2>
-    <button class="btn icon" id="helpclose" data-i18n-attr="aria-label:close"><i data-icon="close"></i></button>
+    <button class="btn icon dclose" id="helpclose" data-i18n-attr="aria-label:close"><i data-icon="close"></i></button>
   </div>
   <h3 data-i18n="shortcutsTitle"></h3>
   <table class="keys">
